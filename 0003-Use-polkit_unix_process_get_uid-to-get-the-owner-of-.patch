@@ -1,0 +1,40 @@
+From 55e6f92e7340d57a66f83bd69bdf26454fdf7533 Mon Sep 17 00:00:00 2001
+From: David Zeuthen <davidz@redhat.com>
+Date: Mon, 11 Apr 2011 12:41:35 -0400
+Subject: [PATCH 3/6] Use polkit_unix_process_get_uid() to get the owner of a process
+
+This avoids a TOCTTOU problem.
+
+Signed-off-by: David Zeuthen <davidz@redhat.com>
+---
+ src/polkitbackend/polkitbackendsessionmonitor.c |   13 ++++++-------
+ 1 files changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/src/polkitbackend/polkitbackendsessionmonitor.c b/src/polkitbackend/polkitbackendsessionmonitor.c
+index 2028250..d976514 100644
+--- a/src/polkitbackend/polkitbackendsessionmonitor.c
++++ b/src/polkitbackend/polkitbackendsessionmonitor.c
+@@ -418,14 +418,13 @@ polkit_backend_session_monitor_get_user_for_subject (PolkitBackendSessionMonitor
+ 
+   if (POLKIT_IS_UNIX_PROCESS (subject))
+     {
+-      GError *local_error;
+-
+-      local_error = NULL;
+-      uid = polkit_unix_process_get_owner (POLKIT_UNIX_PROCESS (subject), &local_error);
+-      if (local_error != NULL)
++      uid = polkit_unix_process_get_uid (POLKIT_UNIX_PROCESS (subject));
++      if ((gint) uid == -1)
+         {
+-          g_propagate_error (error, local_error);
+-          g_error_free (local_error);
++          g_set_error (error,
++                       POLKIT_ERROR,
++                       POLKIT_ERROR_FAILED,
++                       "Unix process subject does not have uid set");
+           goto out;
+         }
+       user = polkit_unix_user_new (uid);
+-- 
+1.7.4.2
+

@@ -1,0 +1,68 @@
+From 28e485cac449c8eb37c21eecb95f5fa125def9d4 Mon Sep 17 00:00:00 2001
+From: Dan Rosenberg <dan.j.rosenberg@gmail.com>
+Date: Wed, 10 Mar 2010 12:46:19 -0500
+Subject: [PATCH 5/6] =?UTF-8?q?Bug=2026982=20=E2=80=93=20pkexec=20information=20disclosure=20vulnerability?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+pkexec is vulnerable to a minor information disclosure vulnerability
+that allows an attacker to verify whether or not arbitrary files
+exist, violating directory permissions. I reproduced the issue on my
+Karmic installation as follows:
+
+ $ mkdir secret
+ $ sudo chown root:root secret
+ $ sudo chmod 400 secret
+ $ sudo touch secret/hidden
+ $ pkexec /home/drosenbe/secret/hidden
+ (password prompt)
+ $ pkexec /home/drosenbe/secret/doesnotexist
+ Error getting information about /home/drosenbe/secret/doesnotexist: No such
+ file or directory
+
+I've attached my patch for the issue. I replaced the stat() call
+entirely with access() using F_OK, so rather than check that the
+target exists, pkexec now checks if the user has permission to verify
+the existence of the program. There might be another way of doing
+this, such as chdir()'ing to the parent directory of the target and
+calling lstat(), but this seemed like more code than necessary to
+prevent such a minor problem.  I see no reason to allow pkexec to
+execute targets that are not accessible to the executing user because
+of directory permissions. This is such a limited use case anyway that
+this doesn't really affect functionality.
+
+http://bugs.freedesktop.org/show_bug.cgi?id=26982
+
+Signed-off-by: David Zeuthen <davidz@redhat.com>
+---
+ src/programs/pkexec.c |    5 ++---
+ 1 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/programs/pkexec.c b/src/programs/pkexec.c
+index a7b7ba6..0c1dacd 100644
+--- a/src/programs/pkexec.c
++++ b/src/programs/pkexec.c
+@@ -414,7 +414,6 @@ main (int argc, char *argv[])
+   GPtrArray *saved_env;
+   gchar *opt_user;
+   pid_t pid_of_caller;
+-  struct stat statbuf;
+ 
+   ret = 127;
+   authority = NULL;
+@@ -523,9 +522,9 @@ main (int argc, char *argv[])
+       g_free (path);
+       argv[n] = path = s;
+     }
+-  if (stat (path, &statbuf) != 0)
++  if (access (path, F_OK) != 0)
+     {
+-      g_printerr ("Error getting information about %s: %s\n", path, g_strerror (errno));
++      g_printerr ("Error accessing %s: %s\n", path, g_strerror (errno));
+       goto out;
+     }
+   command_line = g_strjoinv (" ", argv + n);
+-- 
+1.7.4.2
+

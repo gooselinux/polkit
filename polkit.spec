@@ -1,7 +1,7 @@
 Summary: PolicyKit Authorization Framework
 Name: polkit
 Version: 0.96
-Release: 2%{?dist}
+Release: 2%{?dist}.1
 License: LGPLv2+
 URL: http://www.freedesktop.org/wiki/Software/PolicyKit
 Source0: http://hal.freedesktop.org/releases/%{name}-%{version}.tar.gz
@@ -19,6 +19,19 @@ Requires: dbus
 
 Obsoletes: PolicyKit <= 0.10
 Provides: PolicyKit = 0.11
+
+# Backport of patches that fix CVE-2011-1485
+# See https://bugzilla.redhat.com/show_bug.cgi?id=692922
+#
+# Also see the polkit-0-96 branch in the upstream git repo.
+#
+Patch10: 0001-PolkitUnixProcess-Clarify-that-the-real-uid-is-retur.patch
+Patch11: 0002-Make-PolkitUnixProcess-also-record-the-uid-of-the-pr.patch
+Patch12: 0003-Use-polkit_unix_process_get_uid-to-get-the-owner-of-.patch
+Patch13: 0004-pkexec-Avoid-TOCTTOU-problems-with-parent-process.patch
+Patch14: 0005-Bug-26982-pkexec-information-disclosure-vulnerabilit.patch
+Patch15: 0006-Bug-29051-Configuration-reload-on-every-query.patch
+
 
 %description
 PolicyKit is a toolkit for defining and handling authorizations.
@@ -62,6 +75,12 @@ Roles and default policy for desktop usage.
 
 %prep
 %setup -q
+%patch10 -p1
+%patch11 -p1
+%patch12 -p1
+%patch13 -p1
+%patch14 -p1
+%patch15 -p1
 
 %build
 %configure --enable-gtk-doc --disable-static --libexecdir=%{_libexecdir}/polkit-1 --enable-examples --disable-introspection
@@ -189,6 +208,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/gtk-doc/html/*
 
 %changelog
+* Mon Apr 11 2011 David Zeuthen <davidz@redhat.com> - 0.96-2%{?dist}.1
+- Include fixes for CVE-2011-1485
+- Resolves: #692941
+
 * Mon Jun 21 2010 Matthias Clasen <mclasen@redhat.com> - 0.96-2
 - Fix a multilib problem
 Resolves: #605099

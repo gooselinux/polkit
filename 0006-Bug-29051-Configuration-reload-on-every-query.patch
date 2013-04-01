@@ -1,0 +1,45 @@
+From f664666137fb85c19b636a2e0bfd4de0e7d59b56 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Petr=20Mr=C3=A1zek?= <peterix@gmail.com>
+Date: Wed, 14 Jul 2010 02:59:12 +0200
+Subject: [PATCH 6/6] =?UTF-8?q?Bug=2029051=20=E2=80=93=20Configuration=20reload=20on=20every=20query?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Set has_data to true after the data is loaded to prevent excessive
+reloading of config files.
+
+Signed-off-by: David Zeuthen <davidz@redhat.com>
+---
+ src/polkitbackend/polkitbackendconfigsource.c      |    1 +
+ .../polkitbackendlocalauthorizationstore.c         |    2 ++
+ 2 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/src/polkitbackend/polkitbackendconfigsource.c b/src/polkitbackend/polkitbackendconfigsource.c
+index 224d0d0..465da96 100644
+--- a/src/polkitbackend/polkitbackendconfigsource.c
++++ b/src/polkitbackend/polkitbackendconfigsource.c
+@@ -386,6 +386,7 @@ polkit_backend_config_source_ensure (PolkitBackendConfigSource *source)
+     }
+ 
+   source->priv->key_files = g_list_reverse (source->priv->key_files);
++  source->priv->has_data = TRUE;
+ 
+  out:
+   g_list_foreach (files, (GFunc) g_object_unref, NULL);
+diff --git a/src/polkitbackend/polkitbackendlocalauthorizationstore.c b/src/polkitbackend/polkitbackendlocalauthorizationstore.c
+index 5d5dc14..b959269 100644
+--- a/src/polkitbackend/polkitbackendlocalauthorizationstore.c
++++ b/src/polkitbackend/polkitbackendlocalauthorizationstore.c
+@@ -641,6 +641,8 @@ polkit_backend_local_authorization_store_ensure (PolkitBackendLocalAuthorization
+       g_free (filename);
+     }
+ 
++  store->priv->has_data = TRUE;
++
+  out:
+   g_list_foreach (files, (GFunc) g_object_unref, NULL);
+   g_list_free (files);
+-- 
+1.7.4.2
+
